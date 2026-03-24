@@ -55,11 +55,11 @@ async def update_metals() -> None:
 
     # Заголовок
     header = (
-        f"<b>{'Дата':<{date_w}}</b>"
-        f"<b>{'  Au ':>{gold_w}}</b>"
-        f"<b>{' Ag':>{silver_w}}</b>"
-        f"<b>{' Pt ':>{platinum_w}}</b>"
-        f"<b>{' Pd ':>{palladium_w}}</b>"
+        f"{'Дата':<{date_w}}"
+        f"{'  Au ':>{gold_w}}"
+        f"{' Ag':>{silver_w}}"
+        f"{' Pt ':>{platinum_w}}"
+        f"{' Pd ':>{palladium_w}}"
     )
     separator = "-" * len(header)
     lines = [header, separator]
@@ -67,7 +67,7 @@ async def update_metals() -> None:
     # Строки
     for date, row in df.iterrows():
         line = (
-            f"<b>{date.strftime('%d.%m'):<{date_w}}</b>"
+            f"{date.strftime('%d.%m'):<{date_w}}"
             f"{row['GOLD']:>{gold_w}.0f}"
             f"{row['SILVER']:>{silver_w}.0f}"
             f"{row['PLATINUM']:>{platinum_w}.0f}"
