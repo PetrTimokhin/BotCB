@@ -6,7 +6,8 @@ from zoneinfo import ZoneInfo
 from aiogram.exceptions import TelegramForbiddenError
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import cbrapi
-
+from aiogram.filters import CommandStart
+from aiogram.types import Message
 
 # токен тест бота
 TOKEN = os.getenv("TOKEN")  # Telegram токен
@@ -56,10 +57,6 @@ async def update_metals() -> None:
     metals_rates = "\n".join(lines)
 
 
-# данные для первой рассылки
-asyncio.run(update_metals())
-
-
 # РАССЫЛКА
 async def send_metals():
     for user_id in list(db_set):
@@ -70,18 +67,32 @@ async def send_metals():
             # пользователь заблокировал бота
             db_set.remove(user_id)
             print(f"user {user_id} удалён из базы")
+        except Exception as e:
+            print(f"Ошибка отправки {user_id}: {e}")
+
+
+# обработка команды старт
+@dp.message(CommandStart())
+async def cmd_start(message: Message):
+    db_set.add(message.from_user.id)
+    await message.answer("Вы подписались на ежедневную рассылку ✅")
+    await message.answer(metals_rates)
 
 
 # SCHEDULER
 async def main():
+    # данные для первой рассылки
+    await update_metals()
+
     scheduler = AsyncIOScheduler(timezone=ZoneInfo("Europe/Moscow"))
     # 09:00 обновление
-    scheduler.add_job(update_metals, "cron", hour=9, minute=00)
+    scheduler.add_job(update_metals, trigger="cron", hour=9, minute=0)
     # 10:00 рассылка
     scheduler.add_job(send_metals, "cron", hour=10, minute=00)
     scheduler.start()
 
-    await dp.start_polling(bot)
+    await dp.start_polling(bot,
+                           allowed_updates=dp.resolve_used_update_types())
 
 
 if __name__ == "__main__":
