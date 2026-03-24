@@ -20,11 +20,18 @@ dp = Dispatcher()
 db_set = set()
 # котировки по металлам
 metals_rates = ''
-
+usd_rate = ''
+cny_rate = ''
+key_rate = ''
+eur_rate = ''
 
 # ОБНОВЛЕНИЕ ДАННЫХ
 async def update_metals() -> None:
     global metals_rates
+    global usd_rate
+    global cny_rate
+    global key_rate
+    global eur_rate
     # Диапазон дат
     end_date = datetime.now().date()
     start_date = end_date - timedelta(days=10)
@@ -75,16 +82,47 @@ async def update_metals() -> None:
             f"{row['PALLADIUM']:>{palladium_w}.0f}"
         )
         lines.append(line)
-
     # Итоговый текст с моноширинным блоком
     metals_rates = "<pre>" + "\n".join(lines) + "</pre>"
+
+    # получение курсов валют и ключевой ставки
+    df = cbrapi.get_key_rate(first_date=str(start_date), period='D')
+    key_rate += 'Ключевая ставка ЦБ\n'
+    for d, value in df.items():
+        d = d.strftime("%d.%m")
+        key_rate += f"{d}: {value}%\n"
+
+    usd = cbrapi.get_time_series("USD", first_date=str(start_date),
+                                 last_date=str(end_date), period='D')
+    usd_rate += 'Курс USD\n'
+    for d, value in usd.items():
+        d = d.strftime("%d.%m")
+        usd_rate += f"{d}: {round(value, 2)}\n"
+
+    eur = cbrapi.get_time_series("EUR", first_date=str(start_date),
+                                 last_date=str(end_date), period='D')
+    eur_rate += 'Курс EUR\n'
+    for d, value in eur.items():
+        d = d.strftime("%d.%m")
+        eur_rate += f"{d}: {round(value, 2)}\n"
+
+    cny = cbrapi.get_time_series("CNY", first_date=str(start_date),
+                                 last_date=str(end_date), period='D')
+    eur_rate += 'Курс CNY\n'
+    for d, value in cny.items():
+        d = d.strftime("%d.%m")
+        cny_rate += f"{d}: {round(value, 2)}\n"
 
 
 # РАССЫЛКА
 async def send_metals():
     for user_id in list(db_set):
         try:
-            await bot.send_message(user_id, metals_rates, parse_mode="HTML")
+            await bot.send_message(user_id, metals_rates, parse_mode="MARKDOWN")
+            await bot.send_message(user_id, usd_rate)
+            await bot.send_message(user_id, eur_rate)
+            await bot.send_message(user_id, cny_rate)
+            await bot.send_message(user_id, key_rate)
 
         except TelegramForbiddenError:
             # пользователь заблокировал бота
@@ -100,6 +138,10 @@ async def cmd_start(message: Message):
     db_set.add(message.from_user.id)
     await message.answer("Вы подписались на ежедневную рассылку ✅")
     await message.answer(metals_rates, parse_mode="HTML")
+    await message.answer(usd_rate)
+    await message.answer(eur_rate)
+    await message.answer(cny_rate)
+    await message.answer(key_rate)
 
 
 # SCHEDULER
