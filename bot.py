@@ -118,7 +118,7 @@ async def update_metals() -> None:
 async def send_metals():
     for user_id in list(db_set):
         try:
-            await bot.send_message(user_id, metals_rates, parse_mode="MARKDOWN")
+            await bot.send_message(user_id, metals_rates, parse_mode="HTML")
             await bot.send_message(user_id, usd_rate)
             await bot.send_message(user_id, eur_rate)
             await bot.send_message(user_id, cny_rate)
@@ -137,9 +137,9 @@ async def send_metals():
 async def cmd_start(message: Message):
     db_set.add(message.from_user.id)
     await message.answer("Вы подписались на ежедневную рассылку ✅")
-    await message.answer(metals_rates, parse_mode="MARKDOWN")
-    await message.answer(usd_rate, parse_mode="MARKDOWN")
-    await message.answer(eur_rate, parse_mode="HTML")
+    await message.answer(metals_rates, parse_mode="HTML")
+    await message.answer(usd_rate)
+    await message.answer(eur_rate)
     await message.answer(cny_rate)
     await message.answer(key_rate)
 
