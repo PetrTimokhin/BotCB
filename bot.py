@@ -29,39 +29,27 @@ async def update_metals() -> None:
     end_date = datetime.now().date()
     start_date = end_date - timedelta(days=10)
 
-    # Получаем данные
-    df = cbrapi.get_metals_prices(first_date=str(start_date),
-                                  last_date=str(end_date))
+    # Получаем данные с cbrapi
+    try:
+        df = cbrapi.get_metals_prices(first_date=str(start_date),
+                                      last_date=str(end_date))
+        if df.empty:
+            metals_rates = "Нет данных по металлам ❌"
+            return
+    except Exception as e:
+        metals_rates = f"Ошибка получения данных: {e}"
+        return
 
-    columns = ['GOLD', 'SILVER', 'PLATINUM', 'PALLADIUM']
-    df = df[columns]
-
-    # Заголовок таблицы
-    header = f"{'DATE':<10} {'GOLD':>0} {'SILVER':>10} {'PLATINUM':>9} {'PALLADIUM':>7}"
-    separator = "-" * len(header)
-
-    lines = [header, separator]
-
-    # Формируем строки таблицы
-    for date, row in df.iterrows():
-        line = (
-            f"{date.strftime('%d-%m-%Y'):<10} "
-            f"{format(row['GOLD'], '.2f'):>8} "
-            f"{format(row['SILVER'], '.2f'):>6} "
-            f"{format(row['PLATINUM'], '.2f'):>8} "
-            f"{format(row['PALLADIUM'], '.2f'):>8}"
-        )
-        lines.append(line)
-
-    # Итоговый текст
-    metals_rates = "\n".join(lines)
+    metals_rates = df.to_string(float_format="%.2f")
 
 
 # РАССЫЛКА
 async def send_metals():
     for user_id in list(db_set):
         try:
-            await bot.send_message(user_id, metals_rates)
+            # await bot.send_message(user_id, metals_rates)
+            await bot.send_message(user_id, f"<pre>{metals_rates}</pre>",
+                                   parse_mode="HTML")
 
         except TelegramForbiddenError:
             # пользователь заблокировал бота
@@ -77,6 +65,7 @@ async def cmd_start(message: Message):
     db_set.add(message.from_user.id)
     await message.answer("Вы подписались на ежедневную рассылку ✅")
     await message.answer(metals_rates)
+    await message.answer(f"<pre>{metals_rates}</pre>", parse_mode="HTML")
 
 
 # SCHEDULER
