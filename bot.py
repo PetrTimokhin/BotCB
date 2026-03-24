@@ -43,6 +43,7 @@ async def update_metals() -> None:
     # переводим фрейм сразу в строку
     # metals_rates = df.to_string(float_format="%.2f")
 
+    # Заголовок и строки как раньше, только добавляем <pre> для Telegram
     columns = ['GOLD', 'SILVER', 'PLATINUM', 'PALLADIUM']
     df = df[columns]
 
@@ -56,12 +57,12 @@ async def update_metals() -> None:
     # Заголовок
     header = (
         f"{'Дата':<{date_w}}"
-        f"{'  Au ':>{gold_w}}"
-        f"{' Ag':>{silver_w}}"
-        f"{' Pt ':>{platinum_w}}"
-        f"{' Pd ':>{palladium_w}}"
+        f"{'Au':>{gold_w}}"
+        f"{'Ag':>{silver_w}}"
+        f"{'Pt':>{platinum_w}}"
+        f"{'Pd':>{palladium_w}}"
     )
-    separator = "_" * len(header)
+    separator = "*" * len(header)
     lines = [header, separator]
 
     # Строки
@@ -75,16 +76,15 @@ async def update_metals() -> None:
         )
         lines.append(line)
 
-    metals_rates = "\n".join(lines)
-
+    # Итоговый текст с моноширинным блоком
+    metals_rates = "<pre>" + "\n".join(lines) + "</pre>"
 
 
 # РАССЫЛКА
 async def send_metals():
     for user_id in list(db_set):
         try:
-            await bot.send_message(user_id, metals_rates)
-            await bot.send_message(user_id, metals_rates)
+            await bot.send_message(user_id, metals_rates, parse_mode="HTML")
 
         except TelegramForbiddenError:
             # пользователь заблокировал бота
@@ -99,7 +99,7 @@ async def send_metals():
 async def cmd_start(message: Message):
     db_set.add(message.from_user.id)
     await message.answer("Вы подписались на ежедневную рассылку ✅")
-    await message.answer(metals_rates)
+    await message.answer(metals_rates, parse_mode="HTML")
 
 
 # SCHEDULER
