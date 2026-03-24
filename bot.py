@@ -40,18 +40,51 @@ async def update_metals() -> None:
         metals_rates = f"Ошибка получения данных: {e}"
         return
 
-    metals_rates = df.to_string(float_format="%.2f")
+    # переводим фрейм сразу в строку
+    # metals_rates = df.to_string(float_format="%.2f")
+
+    columns = ['GOLD', 'SILVER', 'PLATINUM', 'PALLADIUM']
+    df = df[columns]
+
+    # ширины колонок
+    date_w = 7
+    gold_w = 5
+    silver_w = 5
+    platinum_w = 5
+    palladium_w = 5
+
+    # Заголовок
+    header = (
+        f"<b>{'Дата':<{date_w}}</b>"
+        f"<b>{'  Au ':>{gold_w}}</b>"
+        f"<b>{' Ag':>{silver_w}}</b>"
+        f"<b>{' Pt ':>{platinum_w}}</b>"
+        f"<b>{' Pd ':>{palladium_w}}</b>"
+    )
+    separator = "-" * len(header)
+    lines = [header, separator]
+
+    # Строки
+    for date, row in df.iterrows():
+        line = (
+            f"<b>{date.strftime('%d.%m'):<{date_w}}</b>"
+            f"{row['GOLD']:>{gold_w}.0f}"
+            f"{row['SILVER']:>{silver_w}.0f}"
+            f"{row['PLATINUM']:>{platinum_w}.0f}"
+            f"{row['PALLADIUM']:>{palladium_w}.0f}"
+        )
+        lines.append(line)
+
+    metals_rates = "\n".join(lines)
+
 
 
 # РАССЫЛКА
 async def send_metals():
     for user_id in list(db_set):
         try:
-            # await bot.send_message(user_id, metals_rates)
-            await bot.send_message(user_id, f"<pre>{metals_rates}</pre>",
-                                   parse_mode="HTML")
-            # await bot.send_message(user_id, f"<code>{metals_rates}</code>",
-            #                        parse_mode="HTML")
+            await bot.send_message(user_id, metals_rates)
+            await bot.send_message(user_id, metals_rates, parse_mode="HTML")
 
         except TelegramForbiddenError:
             # пользователь заблокировал бота
@@ -66,10 +99,7 @@ async def send_metals():
 async def cmd_start(message: Message):
     db_set.add(message.from_user.id)
     await message.answer("Вы подписались на ежедневную рассылку ✅")
-    # await message.answer(metals_rates)
-    await message.answer(f"<pre>{metals_rates}</pre>", parse_mode="HTML")
-    # await message.answer(f"<code>{metals_rates}</code>",
-    #                      parse_mode="HTML")
+    await message.answer(metals_rates, parse_mode="HTML")
 
 
 # SCHEDULER
