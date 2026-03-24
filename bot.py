@@ -48,7 +48,9 @@ async def send_metals():
     for user_id in list(db_set):
         try:
             # await bot.send_message(user_id, metals_rates)
-            await bot.send_message(user_id, f"<pre>{metals_rates}</pre>",
+            # await bot.send_message(user_id, f"<pre>{metals_rates}</pre>",
+            #                        parse_mode="HTML")
+            await bot.send_message(user_id, f"<code>{metals_rates}</code>",
                                    parse_mode="HTML")
 
         except TelegramForbiddenError:
@@ -64,8 +66,10 @@ async def send_metals():
 async def cmd_start(message: Message):
     db_set.add(message.from_user.id)
     await message.answer("Вы подписались на ежедневную рассылку ✅")
-    await message.answer(metals_rates)
-    await message.answer(f"<pre>{metals_rates}</pre>", parse_mode="HTML")
+    # await message.answer(metals_rates)
+    # await message.answer(f"<pre>{metals_rates}</pre>", parse_mode="HTML")
+    await message.answer(f"<code>{metals_rates}</code>",
+                         parse_mode="HTML")
 
 
 # SCHEDULER
