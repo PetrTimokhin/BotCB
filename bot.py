@@ -1,13 +1,14 @@
-import asyncio
 import os
+from datetime import datetime, timedelta
+import asyncio
 from aiogram import Bot, Dispatcher
-from aiogram.types import Message
-from aiogram.filters import CommandStart
+from zoneinfo import ZoneInfo
 from aiogram.exceptions import TelegramForbiddenError
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import cbrapi
 
 
+# токен тест бота
 TOKEN = os.getenv("TOKEN")  # Telegram токен
 # DATABASE_URL = os.getenv("DATABASE_URL")  # Supabase URL
 
@@ -15,60 +16,69 @@ bot = Bot(TOKEN)
 dp = Dispatcher()
 
 # "база данных"
-db_lst = list()
-# данные металлов
-metals_data = ""
+db_set = set()
+# котировки по металлам
+metals_rates = ''
 
 
 # ОБНОВЛЕНИЕ ДАННЫХ
-async def update_metals():
-    global metals_data
+async def update_metals() -> None:
+    global metals_rates
+    # Диапазон дат
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=10)
 
-    df = cbrapi.get_metals_prices(first_date='2026-03-06', last_date='2026-03-06')
-    latest = df.tail(1)
-    quote_date = latest.index[0]  # это datetime.date или datetime
-    dt = quote_date.strftime("%d.%m.%Y")
-    metals_dict = latest.to_dict(orient='records')[0]
-    print_metals_dict = ("\n".join(f"{k}: {v}" for k, v in metals_dict.items()))
-    data = dt, print_metals_dict
-    metals_data = f"Дата котировок: {data[0]} \n\nКурсы металлов:\n{data[1]}"
+    # Получаем данные
+    df = cbrapi.get_metals_prices(first_date=str(start_date),
+                                  last_date=str(end_date))
+
+    columns = ['GOLD', 'SILVER', 'PLATINUM', 'PALLADIUM']
+    df = df[columns]
+
+    # Заголовок таблицы
+    header = f"{'DATE':<10} {'GOLD':>0} {'SILVER':>10} {'PLATINUM':>9} {'PALLADIUM':>7}"
+    separator = "-" * len(header)
+
+    lines = [header, separator]
+
+    # Формируем строки таблицы
+    for date, row in df.iterrows():
+        line = (
+            f"{date.strftime('%d-%m-%Y'):<10} "
+            f"{format(row['GOLD'], '.2f'):>8} "
+            f"{format(row['SILVER'], '.2f'):>6} "
+            f"{format(row['PLATINUM'], '.2f'):>8} "
+            f"{format(row['PALLADIUM'], '.2f'):>8}"
+        )
+        lines.append(line)
+
+    # Итоговый текст
+    metals_rates = "\n".join(lines)
 
 
 # данные для первой рассылки
 asyncio.run(update_metals())
 
 
-# START
-@dp.message(CommandStart())
-async def start_cmd(message: Message):
-    global metals_data
-    user_id = message.from_user.id
-    db_lst.append(str(user_id))
-    await message.answer("Вы подписаны на рассылку курсов металлов ⛏")
-    await bot.send_message(str(user_id), metals_data)
-
-
 # РАССЫЛКА
 async def send_metals():
-    global db_lst
-
-    for user_id in list(db_lst):
+    for user_id in list(db_set):
         try:
-            await bot.send_message(user_id, metals_data)
+            await bot.send_message(user_id, metals_rates)
 
         except TelegramForbiddenError:
             # пользователь заблокировал бота
-            db_lst.remove(user_id)
+            db_set.remove(user_id)
             print(f"user {user_id} удалён из базы")
 
 
 # SCHEDULER
 async def main():
-    scheduler = AsyncIOScheduler()
-    # 08:59 обновление
-    scheduler.add_job(update_metals, "cron", hour=8, minute=00)
-    # 09:00 рассылка
-    scheduler.add_job(send_metals, "cron", hour=9, minute=00)
+    scheduler = AsyncIOScheduler(timezone=ZoneInfo("Europe/Moscow"))
+    # 09:00 обновление
+    scheduler.add_job(update_metals, "cron", hour=9, minute=00)
+    # 10:00 рассылка
+    scheduler.add_job(send_metals, "cron", hour=10, minute=00)
     scheduler.start()
 
     await dp.start_polling(bot)
