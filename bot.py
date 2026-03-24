@@ -108,7 +108,7 @@ async def update_metals() -> None:
 
     cny = cbrapi.get_time_series("CNY", first_date=str(start_date),
                                  last_date=str(end_date), period='D')
-    eur_rate += 'Курс CNY\n'
+    cny_rate += 'Курс CNY\n'
     for d, value in cny.items():
         d = d.strftime("%d.%m")
         cny_rate += f"{d}: {round(value, 2)}\n"
@@ -137,9 +137,9 @@ async def send_metals():
 async def cmd_start(message: Message):
     db_set.add(message.from_user.id)
     await message.answer("Вы подписались на ежедневную рассылку ✅")
-    await message.answer(metals_rates, parse_mode="HTML")
-    await message.answer(usd_rate)
-    await message.answer(eur_rate)
+    await message.answer(metals_rates, parse_mode="MARKDOWN")
+    await message.answer(usd_rate, parse_mode="MARKDOWN")
+    await message.answer(eur_rate, parse_mode="HTML")
     await message.answer(cny_rate)
     await message.answer(key_rate)
 
